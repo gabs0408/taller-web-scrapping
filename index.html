@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Visualización - Web Scraper & Supabase</title>
+    <!-- TailwindCSS CDN para diseño responsive y moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800 font-sans">
+
+    <!-- Encabezado -->
+    <header class="bg-indigo-600 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold">Dashboard de Productos Scrapeados</h1>
+                <p class="text-indigo-200 text-sm">Integración en tiempo real con Supabase API</p>
+            </div>
+            <button id="btn-actualizar" onclick="cargarProductos()" class="bg-white text-indigo-600 hover:bg-indigo-50 font-semibold px-4 py-2 rounded-lg shadow transition flex items-center gap-2">
+                <svg id="spinner" class="w-5 h-5 hidden animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Actualizar Datos</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="max-w-7xl mx-auto px-6 py-8">
+        <!-- Barra de Estado y Contadores -->
+        <div class="flex justify-between items-center mb-6">
+            <p class="text-gray-600 text-lg">
+                Total de Registros: <span id="total-count" class="font-bold text-indigo-600">0</span>
+            </p>
+            <span id="last-updated" class="text-xs text-gray-500"></span>
+        </div>
+
+        <!-- Grid de Tarjetas -->
+        <div id="grid-productos" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <!-- Las tarjetas dinamicas se insertaran aqui via JS -->
+        </div>
+
+        <!-- Estado Vacio / Cargando -->
+        <div id="loading-state" class="text-center py-20">
+            <p class="text-gray-500 text-lg">Cargando productos desde la base de datos...</p>
+        </div>
+        <div id="empty-state" class="text-center py-20 hidden">
+            <p class="text-gray-500 text-lg">No hay datos almacenados todavía. Ejecuta tu script <code class="bg-gray-200 px-2 py-1 rounded">scraper.py</code> para poblar el sistema.</p>
+        </div>
+    </main>
+
+    <!-- Lógica de Peticiones Asíncronas (JS) -->
+    <script>
+        const API_URL = "http://127.0.0.1:8000/api/items";
+
+        async function cargarProductos() {
+            const grid = document.getElementById("grid-productos");
+            const loading = document.getElementById("loading-state");
+            const empty = document.getElementById("empty-state");
+            const totalCount = document.getElementById("total-count");
+            const lastUpdated = document.getElementById("last-updated");
+            const spinner = document.getElementById("spinner");
+
+            spinner.classList.remove("hidden");
+            
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error("Error en la petición a la API");
+
+                const productos = await response.json();
+                
+                grid.innerHTML = "";
+                loading.classList.add("hidden");
+
+                if (productos.length === 0) {
+                    empty.classList.remove("hidden");
+                    totalCount.textContent = "0";
+                } else {
+                    empty.classList.add("hidden");
+                    totalCount.textContent = productos.length;
+
+                    productos.forEach(prod => {
+                        const card = document.createElement("div");
+                        card.className = "bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition flex flex-col justify-between";
+
+                        const fecha = new Date(prod.created_at).toLocaleString();
+                        const imgUrl = prod.imagen || "https://via.placeholder.com/300x200?text=Sin+Imagen";
+
+                        card.innerHTML = `
+                            <div>
+                                <img src="${imgUrl}" alt="${prod.nombre}" class="w-full h-48 object-contain bg-gray-50 p-4" onerror="this.src='https://via.placeholder.com/300x200?text=Imagen+no+disponible'">
+                                <div class="p-4">
+                                    <h3 class="font-semibold text-gray-800 text-md line-clamp-2 mb-2" title="${prod.nombre}">
+                                        ${prod.nombre}
+                                    </h3>
+                                    <div class="flex items-baseline gap-2 mb-2">
+                                        <span class="text-xl font-bold text-green-600">${prod.precio || 'N/A'}</span>
+                                        ${prod.precio_lista ? `<span class="text-sm text-gray-400 line-through">${prod.precio_lista}</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center text-xs text-gray-500">
+                                <span>${fecha}</span>
+                                ${prod.url ? `<a href="${prod.url}" target="_blank" class="text-indigo-600 hover:underline font-medium">Ver en tienda &rarr;</a>` : ''}
+                            </div>
+                        `;
+
+                        grid.appendChild(card);
+                    });
+                }
+
+                lastUpdated.textContent = `Última sincronización: ${new Date().toLocaleTimeString()}`;
+            } catch (error) {
+                console.error("Error cargando productos:", error);
+                alert("No se pudo conectar con la API REST Backend. Asegúrate de que server.py esté ejecutándose.");
+            } finally {
+                spinner.classList.add("hidden");
+            }
+        }
+
+        // Cargar productos al abrir la página
+        document.addEventListener("DOMContentLoaded", cargarProductos);
+    </script>
+</body>
+</html>
