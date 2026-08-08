@@ -1,4 +1,4 @@
-# Solución End-to-End: Web Scraping, API REST, Supabase & Frontend
+#Taller Web Scraping, API REST, Supabase & Frontend
 
 Este proyecto implementa una arquitectura completa para la extracción, almacenamiento y visualización de datos web.
 
